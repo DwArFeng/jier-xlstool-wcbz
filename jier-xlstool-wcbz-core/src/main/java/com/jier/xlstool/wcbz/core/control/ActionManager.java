@@ -13,11 +13,16 @@ public interface ActionManager {
 	 * <p>
 	 * 通过该方法使用指定的参数启动程序。该方法只允许调用一次，多次调用会抛出异常。
 	 * 
-	 * @param args 指定的参数。
-	 * @throws IllegalStateException 程序已经启动。
-	 * @throws NullPointerException  指定的入口参数为 <code> null </code>。
+	 * @param args
+	 *            指定的参数。
+	 * @throws IllegalStateException
+	 *             程序已经启动。
+	 * @throws NullPointerException
+	 *             指定的入口参数为 <code> null </code>。
 	 */
 	public void start(String[] args) throws IllegalStateException, NullPointerException;
+
+	public void exit() throws IllegalStateException;
 
 	// --------------------------------------------程序动作--------------------------------------------
 	/**
@@ -27,9 +32,27 @@ public interface ActionManager {
 	 */
 	public void submit(Task task) throws NullPointerException;
 
-	public void setFile2Open(File file);
+	/**
+	 * 
+	 * @param file
+	 */
+	public void setFile2Load(File file);
 
+	/**
+	 * 
+	 * @param file
+	 */
 	public void setFile2Export(File file);
+
+	/**
+	 * 
+	 */
+	public void loadFile() throws IllegalStateException;
+
+	/**
+	 * 
+	 */
+	public void exportFile() throws IllegalStateException;
 
 	// --------------------------------------------日志输出--------------------------------------------
 

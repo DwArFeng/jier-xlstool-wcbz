@@ -4,7 +4,7 @@
 
 	<groupId>com.jier</groupId>
 	<artifactId>jier-xlstool-wcbz</artifactId>
-	<version>0.0.0.a-alpha</version>
+	<version>1.0.0.a</version>
 	<packaging>pom</packaging>
 
 	<name>jier-xlstool-wcbz</name>
@@ -46,11 +46,26 @@
 				<artifactId>commons-cli</artifactId>
 				<version>1.4</version>
 			</dependency>
+			<dependency>
+				<groupId>org.apache.poi</groupId>
+				<artifactId>poi</artifactId>
+				<version>3.17</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.poi</groupId>
+				<artifactId>poi-ooxml</artifactId>
+				<version>3.17</version>
+			</dependency>
+			<dependency>
+				<groupId>com.jier</groupId>
+				<artifactId>jier-xlstool-wcbz-core</artifactId>
+				<version>1.0.0.a</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
 	<modules>
 		<module>jier-xlstool-wcbz-core</module>
-    <module>jier-xlstool-wcbz-launch</module>
+    <module>jier-xlstool-wcbz-launcher</module>
   </modules>
 </project>

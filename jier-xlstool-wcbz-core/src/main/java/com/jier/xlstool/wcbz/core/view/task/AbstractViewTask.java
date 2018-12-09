@@ -1,4 +1,4 @@
-package com.jier.xlstool.wcbz.view.task;
+package com.jier.xlstool.wcbz.core.view.task;
 
 import com.dwarfeng.dutil.develop.backgr.AbstractTask;
 import com.jier.xlstool.wcbz.core.control.ActionManager;

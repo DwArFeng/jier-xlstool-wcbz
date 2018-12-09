@@ -1,18 +1,23 @@
 package com.jier.xlstool.wcbz.core.control;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
-import java.util.WeakHashMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
@@ -21,44 +26,47 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import com.dwarfeng.dutil.basic.cna.AttributeComplex;
-import com.dwarfeng.dutil.basic.cna.model.ListModel;
-import com.dwarfeng.dutil.basic.cna.model.ModelUtil;
 import com.dwarfeng.dutil.basic.cna.model.ReferenceModel;
+import com.dwarfeng.dutil.basic.cna.model.SyncListModel;
+import com.dwarfeng.dutil.basic.cna.model.SyncReferenceModel;
+import com.dwarfeng.dutil.basic.gui.swing.SwingUtil;
+import com.dwarfeng.dutil.basic.io.FileUtil;
 import com.dwarfeng.dutil.basic.io.LoadFailedException;
+import com.dwarfeng.dutil.basic.io.SaveFailedException;
+import com.dwarfeng.dutil.basic.mea.TimeMeasurer;
 import com.dwarfeng.dutil.basic.prog.RuntimeState;
 import com.dwarfeng.dutil.develop.backgr.Background;
-import com.dwarfeng.dutil.develop.backgr.BackgroundUtil;
 import com.dwarfeng.dutil.develop.backgr.Task;
-import com.dwarfeng.dutil.develop.i18n.I18nHandler;
-import com.dwarfeng.dutil.develop.i18n.I18nUtil;
 import com.dwarfeng.dutil.develop.i18n.PropUrlI18nInfo;
 import com.dwarfeng.dutil.develop.i18n.SyncI18nHandler;
 import com.dwarfeng.dutil.develop.i18n.io.XmlPropFileI18nLoader;
-import com.dwarfeng.dutil.develop.logger.LoggerHandler;
-import com.dwarfeng.dutil.develop.logger.LoggerUtil;
 import com.dwarfeng.dutil.develop.logger.SyncLoggerHandler;
 import com.dwarfeng.dutil.develop.logger.SysOutLoggerInfo;
 import com.dwarfeng.dutil.develop.logger.io.Log4jLoggerLoader;
 import com.dwarfeng.dutil.develop.resource.Resource;
 import com.dwarfeng.dutil.develop.resource.SyncResourceHandler;
+import com.dwarfeng.dutil.develop.resource.io.ResourceResetPolicy;
 import com.dwarfeng.dutil.develop.resource.io.XmlJar2FileResourceLoader;
-import com.dwarfeng.dutil.develop.setting.SettingHandler;
 import com.dwarfeng.dutil.develop.setting.SettingUtil;
 import com.dwarfeng.dutil.develop.setting.SyncSettingHandler;
 import com.dwarfeng.dutil.develop.setting.io.PropSettingValueLoader;
+import com.dwarfeng.dutil.develop.setting.io.PropSettingValueSaver;
 import com.jier.xlstool.wcbz.core.model.enumeration.CliSettingItem;
 import com.jier.xlstool.wcbz.core.model.enumeration.CoreSettingItem;
 import com.jier.xlstool.wcbz.core.model.enumeration.I18nKey;
 import com.jier.xlstool.wcbz.core.model.enumeration.ModalSettingItem;
 import com.jier.xlstool.wcbz.core.model.enumeration.ResourceKey;
-import com.jier.xlstool.wcbz.core.model.obverser.ModelObverser;
+import com.jier.xlstool.wcbz.core.model.ioprocessor.XlsStuffInfoLoader;
+import com.jier.xlstool.wcbz.core.model.ioprocessor.XlsStuffInfoSaver;
+import com.jier.xlstool.wcbz.core.model.struct.StuffInfoComparator;
 import com.jier.xlstool.wcbz.core.util.Constants;
+import com.jier.xlstool.wcbz.core.view.MainFrame;
 
-class WCBZControlManager implements ActionManager {
+class WCBZActionlManager implements ActionManager {
 
 	private final WCBZ wcbz;
 
-	public WCBZControlManager(WCBZ wcbz) {
+	public WCBZActionlManager(WCBZ wcbz) {
 		this.wcbz = wcbz;
 	}
 
@@ -70,44 +78,24 @@ class WCBZControlManager implements ActionManager {
 	public void start(String[] args) throws IllegalStateException, NullPointerException {
 		Objects.requireNonNull(args, "入口参数 args 不能为 null。");
 
-		// 检查并设置程序的运行状态未正在运行。
-		checkAndSetRuntimeState2Running();
+		// 要求程序的运行状态为未启动。
+		requireRuntimeState(RuntimeState.NOT_START);
 		try {
 			// 在置被读取之前，首先使用内置的功能模块。
 			applyBuiltinFunctionBeforeApplyConfig();
 			// 通知应用程序正在启动。
 			info(I18nKey.LOGGER_1);
+			// 解析命令行参数。
 			parseCliOption(args);
 			// 应用程序配置。
 			applyConfig();
-			// 启动GUI
+			// 启动GUI。
 			runGUI();
-			// TODO Auto-generated method stub
+			// 设置程序的运行状态为正在运行。
+			setRuntimeState(RuntimeState.RUNNING);
 		} catch (Exception e) {
 			e.printStackTrace();
 			// TODO 紧急退出机制。
-		}
-	}
-
-	/**
-	 * 
-	 * @throws IllegalStateException
-	 */
-	private void checkAndSetRuntimeState2Running() throws IllegalStateException {
-		ReferenceModel<RuntimeState> runtimeStateRef = wcbz.getRuntimeStateRef();
-		Lock runtimeStateLock = wcbz.getRuntimeStateLock();
-		Condition runtimeStateCondition = wcbz.getRuntimeStateCondition();
-
-		if (runtimeStateRef.get() != RuntimeState.NOT_START) {
-			throw new IllegalStateException("禁止多次启动程序。");
-		}
-
-		runtimeStateLock.lock();
-		try {
-			runtimeStateRef.set(RuntimeState.RUNNING);
-			runtimeStateCondition.signalAll();
-		} finally {
-			runtimeStateLock.unlock();
 		}
 	}
 
@@ -191,7 +179,7 @@ class WCBZControlManager implements ActionManager {
 		applyModalSetting();
 	}
 
-	private InputStream openResource(ResourceKey resourceKey) throws IOException {
+	private InputStream openResourceInputStream(ResourceKey resourceKey) throws IOException {
 		Resource resource = wcbz.getResourceHandler().get(resourceKey.getName());
 		try {
 			return resource.openInputStream();
@@ -218,7 +206,8 @@ class WCBZControlManager implements ActionManager {
 				return;
 			}
 			Set<LoadFailedException> eptSet = new LinkedHashSet<>();
-			try (XmlJar2FileResourceLoader loader = new XmlJar2FileResourceLoader(in, flag_forceReset)) {
+			try (XmlJar2FileResourceLoader loader = new XmlJar2FileResourceLoader(in,
+					flag_forceReset ? ResourceResetPolicy.ALWAYS : ResourceResetPolicy.AUTO)) {
 				eptSet.addAll(loader.countinuousLoad(resourceHandler));
 			} catch (IOException e) {
 				formatWarn(I18nKey.LOGGER_6, e, in.toString());
@@ -240,7 +229,7 @@ class WCBZControlManager implements ActionManager {
 			loggerHandler.clear();
 			InputStream in;
 			try {
-				in = openResource(ResourceKey.LOGGER_SETTING);
+				in = openResourceInputStream(ResourceKey.LOGGER_SETTING);
 			} catch (IOException e) {
 				error(I18nKey.LOGGER_9, e);
 				return;
@@ -269,7 +258,7 @@ class WCBZControlManager implements ActionManager {
 			i18nHandler.clear();
 			InputStream in;
 			try {
-				in = openResource(ResourceKey.I18N_SETTING);
+				in = openResourceInputStream(ResourceKey.I18N_SETTING);
 			} catch (IOException e) {
 				error(I18nKey.LOGGER_13, e);
 				return;
@@ -299,7 +288,7 @@ class WCBZControlManager implements ActionManager {
 			SettingUtil.putEnumItems(CoreSettingItem.class, coreSettingHandler);
 			InputStream in;
 			try {
-				in = openResource(ResourceKey.CONFIG);
+				in = openResourceInputStream(ResourceKey.CONFIG);
 			} catch (IOException e) {
 				error(I18nKey.LOGGER_16, e);
 				return;
@@ -349,7 +338,7 @@ class WCBZControlManager implements ActionManager {
 			SettingUtil.putEnumItems(ModalSettingItem.class, modalSettingHandler);
 			InputStream in;
 			try {
-				in = openResource(ResourceKey.CONFIG);
+				in = openResourceInputStream(ResourceKey.MODAL);
 			} catch (IOException e) {
 				error(I18nKey.LOGGER_19, e);
 				return;
@@ -370,19 +359,161 @@ class WCBZControlManager implements ActionManager {
 
 	private void applyModalSetting() {
 		SyncSettingHandler modalSettingHandler = wcbz.getModalSettingHandler();
+		SyncReferenceModel<File> file2LoadModel = wcbz.getFile2LoadModel();
+		SyncReferenceModel<File> file2ExportModel = wcbz.getFile2ExportModel();
+
+		boolean isLoadedFileExists;
+		File loadedFile;
+		boolean isExportedFileExists;
+		File exportedFile;
 
 		modalSettingHandler.getLock().readLock().lock();
 		try {
-
+			isLoadedFileExists = modalSettingHandler.getParsedValidValue(ModalSettingItem.FLAG_LAST_LOADED_FILE_EXISTS,
+					Boolean.class);
+			loadedFile = modalSettingHandler.getParsedValidValue(ModalSettingItem.FILE_LAST_LOADED_FILE, File.class);
+			isExportedFileExists = modalSettingHandler
+					.getParsedValidValue(ModalSettingItem.FLAG_LAST_EXPORTED_FILE_EXISTS, Boolean.class);
+			exportedFile = modalSettingHandler.getParsedValidValue(ModalSettingItem.FILE_LAST_EXPORTED_FILE,
+					File.class);
 		} finally {
 			modalSettingHandler.getLock().readLock().unlock();
 		}
 
+		if (isLoadedFileExists) {
+			file2LoadModel.set(loadedFile);
+		}
+		if (isExportedFileExists) {
+			file2ExportModel.set(exportedFile);
+		}
 	}
 
 	private void runGUI() {
-		// TODO Auto-generated method stub
+		info(I18nKey.LOGGER_40);
 
+		SyncReferenceModel<MainFrame> mainFrameRef = wcbz.getMainFrameRef();
+
+		SwingUtil.invokeInEventQueue(() -> {
+			try {
+				UIManager.setLookAndFeel(new NimbusLookAndFeel());
+			} catch (UnsupportedLookAndFeelException ignore) {
+			}
+
+			MainFrame mainFrame = new MainFrame(wcbz.getModelManager(), wcbz.getActionManager());
+			mainFrame.setVisible(true);
+			mainFrameRef.set(mainFrame);
+		});
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void exit() throws IllegalStateException {
+		// 检查并设置程序的运行状态未正在运行。
+		requireRuntimeState(RuntimeState.RUNNING);
+		try {
+			// 通知应用程序正在退出。
+			info(I18nKey.LOGGER_21);
+			// 保存程序配置。
+			saveConfig();
+			// 关闭GUI。
+			disposeGUI();
+			// 停止后台。
+			stopBackground();
+			// 设置退出代码。
+			setExitCode(0);
+			// 将程序的状态设置为已经结束。
+			setRuntimeState(RuntimeState.ENDED);
+		} catch (Exception e) {
+			e.printStackTrace();
+			// TODO 紧急退出机制。
+		}
+	}
+
+	private void saveConfig() {
+		// 加载模态配置。
+		saveModalSettingHandler();
+	}
+
+	private OutputStream openResourceOutputStream(ResourceKey resourceKey) throws IOException {
+		Resource resource = wcbz.getResourceHandler().get(resourceKey.getName());
+		try {
+			return resource.openOutputStream();
+		} catch (IOException e) {
+			formatWarn(I18nKey.LOGGER_22, e, resourceKey.getName());
+			resource.reset();
+			return resource.openOutputStream();
+		}
+	}
+
+	private void saveModalSettingHandler() {
+		SyncSettingHandler modalSettingHandler = wcbz.getModalSettingHandler();
+
+		info(I18nKey.LOGGER_23);
+		modalSettingHandler.getLock().readLock().lock();
+		try {
+			OutputStream out;
+			try {
+				out = openResourceOutputStream(ResourceKey.MODAL);
+			} catch (IOException e) {
+				error(I18nKey.LOGGER_24, e);
+				return;
+			}
+			Set<SaveFailedException> eptSet = new LinkedHashSet<>();
+			try (PropSettingValueSaver saver = new PropSettingValueSaver(out, true)) {
+				eptSet.addAll(saver.countinuousSave(modalSettingHandler));
+			} catch (IOException e) {
+				formatWarn(I18nKey.LOGGER_6, e, out.toString());
+			}
+			for (SaveFailedException e : eptSet) {
+				warn(I18nKey.LOGGER_25, e);
+			}
+		} finally {
+			modalSettingHandler.getLock().readLock().unlock();
+		}
+	}
+
+	private void disposeGUI() {
+		SyncReferenceModel<MainFrame> mainFrameRef = wcbz.getMainFrameRef();
+
+		SwingUtil.invokeInEventQueue(() -> {
+			mainFrameRef.get().dispose();
+		});
+	}
+
+	private void stopBackground() {
+		Background background = wcbz.getBackground();
+
+		background.shutdown();
+	}
+
+	private void setExitCode(int code) {
+		SyncReferenceModel<Integer> exitCodeRef = wcbz.getExitCodeRef();
+		exitCodeRef.set(code);
+	}
+
+	private void requireRuntimeState(RuntimeState state) {
+		ReferenceModel<RuntimeState> runtimeStateRef = wcbz.getRuntimeStateRef();
+		RuntimeState currentState = runtimeStateRef.get();
+
+		if (currentState != state) {
+			throw new IllegalStateException(String.format("非法的运行状态 %s，应该为 %s", currentState, state));
+		}
+	}
+
+	private void setRuntimeState(RuntimeState state) {
+		ReferenceModel<RuntimeState> runtimeStateRef = wcbz.getRuntimeStateRef();
+		Lock runtimeStateLock = wcbz.getRuntimeStateLock();
+		Condition runtimeStateCondition = wcbz.getRuntimeStateCondition();
+
+		runtimeStateLock.lock();
+		try {
+			runtimeStateRef.set(state);
+			runtimeStateCondition.signalAll();
+		} finally {
+			runtimeStateLock.unlock();
+		}
 	}
 
 	// --------------------------------------------模型动作--------------------------------------------
@@ -399,9 +530,8 @@ class WCBZControlManager implements ActionManager {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void setFile2Open(File file) {
-		// TODO Auto-generated method stub
-
+	public void setFile2Load(File file) {
+		wcbz.getFile2LoadModel().set(file);
 	}
 
 	/**
@@ -409,7 +539,230 @@ class WCBZControlManager implements ActionManager {
 	 */
 	@Override
 	public void setFile2Export(File file) {
-		// TODO Auto-generated method stub
+		wcbz.getFile2ExportModel().set(file);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void loadFile() throws IllegalStateException {
+		SyncReferenceModel<File> file2OpenModel = wcbz.getFile2LoadModel();
+
+		File file = Optional.ofNullable(file2OpenModel.get())
+				.orElseThrow(() -> new IllegalStateException("待读取文件模型中没有文件。"));
+
+		// 记录日志。
+		info(I18nKey.LOGGER_26);
+		// 读取文件信息持久化。
+		setLoadFileModalInfo(file);
+		// 定义计时器。
+		TimeMeasurer tm = new TimeMeasurer();
+		// 开始计时。
+		tm.start();
+		// 读取文件。
+		loadFile0(file);
+		// 数据排序。
+		sortStuffInfo();
+		// 计时结束。
+		tm.stop();
+		// 输出信息。
+		formatInfo(I18nKey.LOGGER_31, tm.getTimeMs());
+	}
+
+	private void setLoadFileModalInfo(File file) {
+		info(I18nKey.LOGGER_32);
+
+		SyncSettingHandler modalSettingHandler = wcbz.getModalSettingHandler();
+
+		modalSettingHandler.getLock().writeLock().lock();
+		try {
+			modalSettingHandler.setParsedValue(ModalSettingItem.FLAG_LAST_LOADED_FILE_EXISTS, true);
+			modalSettingHandler.setParsedValue(ModalSettingItem.FILE_LAST_LOADED_FILE, file);
+		} finally {
+			modalSettingHandler.getLock().writeLock().unlock();
+		}
+	}
+
+	private void loadFile0(File file) {
+		info(I18nKey.LOGGER_28);
+
+		SyncSettingHandler coreSettingHandler = wcbz.getCoreSettingHandler();
+		SyncListModel<AttributeComplex> stuffInfoModel = wcbz.getStuffInfoModel();
+
+		int dataSheetIndex;
+		int firstDataRowCount;
+		int checkColumnIndex;
+		int departmentColumnIndex;
+		int workNumberColumnIndex;
+		int stuffNameColumnIndex;
+		int absenceCountColumnIndex;
+		int maxLoadRow;
+
+		coreSettingHandler.getLock().readLock().lock();
+		try {
+			dataSheetIndex = coreSettingHandler.getParsedValidValue(CoreSettingItem.SRCTABLE_INDEX_COUNT_SHEET,
+					Integer.class);
+			firstDataRowCount = coreSettingHandler.getParsedValidValue(CoreSettingItem.SRCTABLE_INDEX_ROW_FIRST_DATA,
+					Integer.class);
+			checkColumnIndex = coreSettingHandler.getParsedValidValue(CoreSettingItem.SRCTABLE_INDEX_COLUMN_CHECK,
+					Integer.class);
+			departmentColumnIndex = coreSettingHandler
+					.getParsedValidValue(CoreSettingItem.SRCTABLE_INDEX_COLUMN_DEPARTMENT, Integer.class);
+			workNumberColumnIndex = coreSettingHandler
+					.getParsedValidValue(CoreSettingItem.SRCTABLE_INDEX_COLUMN_WORK_NUMBER, Integer.class);
+			stuffNameColumnIndex = coreSettingHandler
+					.getParsedValidValue(CoreSettingItem.SRCTABLE_INDEX_COLUMN_STUFF_NAME, Integer.class);
+			absenceCountColumnIndex = coreSettingHandler
+					.getParsedValidValue(CoreSettingItem.SRCTABLE_INDEX_COLUMN_ABSENCE_COUNT, Integer.class);
+			maxLoadRow = coreSettingHandler.getParsedValidValue(CoreSettingItem.SRCTABLE_POLICY_MAX_LOAD_ROW,
+					Integer.class);
+		} finally {
+			coreSettingHandler.getLock().readLock().unlock();
+		}
+
+		InputStream in;
+		try {
+			in = new FileInputStream(file);
+		} catch (IOException e) {
+			error(I18nKey.LOGGER_28, e);
+			return;
+		}
+		stuffInfoModel.getLock().writeLock().lock();
+		try {
+			// 存放读取异常的对象。
+			Set<LoadFailedException> eptSet = new LinkedHashSet<>();
+			try (XlsStuffInfoLoader loader = new XlsStuffInfoLoader(in, dataSheetIndex, firstDataRowCount,
+					checkColumnIndex, departmentColumnIndex, workNumberColumnIndex, stuffNameColumnIndex,
+					absenceCountColumnIndex, maxLoadRow)) {
+				eptSet = loader.countinuousLoad(stuffInfoModel);
+				for (LoadFailedException e : eptSet) {
+					warn(I18nKey.LOGGER_25, e);
+				}
+			} catch (IOException e) {
+				error(I18nKey.LOGGER_27, e);
+			}
+		} finally {
+			stuffInfoModel.getLock().writeLock().unlock();
+		}
+
+	}
+
+	private void sortStuffInfo() {
+		info(I18nKey.LOGGER_33);
+
+		SyncListModel<AttributeComplex> stuffInfoModel = wcbz.getStuffInfoModel();
+
+		stuffInfoModel.getLock().writeLock().lock();
+		try {
+			Collections.sort(stuffInfoModel, new StuffInfoComparator());
+		} finally {
+			stuffInfoModel.getLock().writeLock().unlock();
+		}
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public void exportFile() throws IllegalStateException {
+		SyncReferenceModel<File> file2ExportModel = wcbz.getFile2ExportModel();
+
+		File file = Optional.ofNullable(file2ExportModel.get())
+				.orElseThrow(() -> new IllegalStateException("待读取文件模型中没有文件。"));
+
+		// 记录日志。
+		info(I18nKey.LOGGER_34);
+		// 读取文件信息持久化。
+		setExportFileModalInfo(file);
+		// 定义计时器。
+		TimeMeasurer tm = new TimeMeasurer();
+		// 开始计时。
+		tm.start();
+		// 读取文件。
+		exportFile0(file);
+		// 计时结束。
+		tm.stop();
+		// 输出信息。
+		formatInfo(I18nKey.LOGGER_31, tm.getTimeMs());
+	}
+
+	private void setExportFileModalInfo(File file) {
+		info(I18nKey.LOGGER_35);
+
+		SyncSettingHandler modalSettingHandler = wcbz.getModalSettingHandler();
+
+		modalSettingHandler.getLock().writeLock().lock();
+		try {
+			modalSettingHandler.setParsedValue(ModalSettingItem.FLAG_LAST_EXPORTED_FILE_EXISTS, true);
+			modalSettingHandler.setParsedValue(ModalSettingItem.FILE_LAST_EXPORTED_FILE, file);
+		} finally {
+			modalSettingHandler.getLock().writeLock().unlock();
+		}
+	}
+
+	private void exportFile0(File file) {
+		info(I18nKey.LOGGER_36);
+
+		SyncSettingHandler coreSettingHandler = wcbz.getCoreSettingHandler();
+		SyncListModel<AttributeComplex> stuffInfoModel = wcbz.getStuffInfoModel();
+
+		int dataSheetIndex;
+		int firstDataRowCount;
+		int departmentColumnIndex;
+		int workNumberColumnIndex;
+		int stuffNameColumnIndex;
+		int absenceCountColumnIndex;
+
+		coreSettingHandler.getLock().readLock().lock();
+		try {
+			dataSheetIndex = coreSettingHandler.getParsedValidValue(CoreSettingItem.EXPTABLE_INDEX_EXPORT_SHEET,
+					Integer.class);
+			firstDataRowCount = coreSettingHandler.getParsedValidValue(CoreSettingItem.EXPTABLE_INDEX_ROW_FIRST_DATA,
+					Integer.class);
+			departmentColumnIndex = coreSettingHandler
+					.getParsedValidValue(CoreSettingItem.EXPTABLE_INDEX_COLUMN_DEPARTMENT, Integer.class);
+			workNumberColumnIndex = coreSettingHandler
+					.getParsedValidValue(CoreSettingItem.EXPTABLE_INDEX_COLUMN_WORK_NUMBER, Integer.class);
+			stuffNameColumnIndex = coreSettingHandler
+					.getParsedValidValue(CoreSettingItem.EXPTABLE_INDEX_COLUMN_STUFF_NAME, Integer.class);
+			absenceCountColumnIndex = coreSettingHandler
+					.getParsedValidValue(CoreSettingItem.EXPTABLE_INDEX_COLUMN_ABSENCE_COUNT, Integer.class);
+		} finally {
+			coreSettingHandler.getLock().readLock().unlock();
+		}
+
+		InputStream in;
+		try {
+			in = openResourceInputStream(ResourceKey.EXPORT_TEMPLATE);
+		} catch (IOException e) {
+			error(I18nKey.LOGGER_37, e);
+			return;
+		}
+		OutputStream out;
+		try {
+			FileUtil.createFileIfNotExists(file);
+			out = new FileOutputStream(file);
+		} catch (IOException e) {
+			error(I18nKey.LOGGER_38, e);
+			return;
+		}
+		stuffInfoModel.getLock().writeLock().lock();
+		try {
+			// 存放读取异常的对象。
+			Set<SaveFailedException> eptSet = new LinkedHashSet<>();
+			try (XlsStuffInfoSaver saver = new XlsStuffInfoSaver(out, in, dataSheetIndex, firstDataRowCount,
+					departmentColumnIndex, workNumberColumnIndex, stuffNameColumnIndex, absenceCountColumnIndex)) {
+				eptSet = saver.countinuousSave(stuffInfoModel);
+				for (SaveFailedException e : eptSet) {
+					warn(I18nKey.LOGGER_39, e);
+				}
+			} catch (IOException e) {
+				error(I18nKey.LOGGER_27, e);
+			}
+		} finally {
+			stuffInfoModel.getLock().writeLock().unlock();
+		}
 
 	}
 
@@ -423,6 +776,7 @@ class WCBZControlManager implements ActionManager {
 		wcbz.getLoggerHandler().trace(message);
 	}
 
+	@SuppressWarnings("unused")
 	private void trace(I18nKey key) throws NullPointerException {
 		trace(wcbz.getI18nHandler().getStringOrDefault(key, Constants.MISSING_LABEL));
 	}
@@ -436,6 +790,7 @@ class WCBZControlManager implements ActionManager {
 		wcbz.getLoggerHandler().debug(message);
 	}
 
+	@SuppressWarnings("unused")
 	private void debug(I18nKey key) throws NullPointerException {
 		debug(wcbz.getI18nHandler().getStringOrDefault(key, Constants.MISSING_LABEL));
 	}
@@ -466,10 +821,12 @@ class WCBZControlManager implements ActionManager {
 		wcbz.getLoggerHandler().warn(message);
 	}
 
+	@SuppressWarnings("unused")
 	private void warn(I18nKey key) throws NullPointerException {
 		warn(wcbz.getI18nHandler().getStringOrDefault(key, Constants.MISSING_LABEL));
 	}
 
+	@SuppressWarnings("unused")
 	private void formatWarn(I18nKey key, Object... args) {
 		warn(String.format(wcbz.getI18nHandler().getStringOrDefault(key, Constants.MISSING_LABEL), args));
 	}
@@ -520,14 +877,17 @@ class WCBZControlManager implements ActionManager {
 		wcbz.getLoggerHandler().fatal(message, t);
 	}
 
+	@SuppressWarnings("unused")
 	private void fatal(I18nKey key, Throwable t) throws NullPointerException {
 		fatal(wcbz.getI18nHandler().getStringOrDefault(key, Constants.MISSING_LABEL), t);
 	}
 
+	@SuppressWarnings("unused")
 	private String i18nString(I18nKey key) {
 		return wcbz.getI18nHandler().getStringOrDefault(key, Constants.MISSING_LABEL);
 	}
 
+	@SuppressWarnings("unused")
 	private String formatI18nString(I18nKey key, Object... args) {
 		return String.format(wcbz.getI18nHandler().getStringOrDefault(key, Constants.MISSING_LABEL), args);
 	}

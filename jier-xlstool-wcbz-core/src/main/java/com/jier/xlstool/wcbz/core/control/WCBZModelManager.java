@@ -46,8 +46,8 @@ class WCBZModelManager implements ModelManager {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public SyncReferenceModel<File> getFile2OpenModel() {
-		return wcbz.getFile2OpenModel();
+	public SyncReferenceModel<File> getFile2LoadModel() {
+		return wcbz.getFile2LoadModel();
 	}
 
 	/**

@@ -14,7 +14,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import com.dwarfeng.dutil.basic.cna.AttributeComplex;
 import com.dwarfeng.dutil.basic.cna.model.DefaultReferenceModel;
 import com.dwarfeng.dutil.basic.cna.model.DelegateListModel;
-import com.dwarfeng.dutil.basic.cna.model.ListModel;
 import com.dwarfeng.dutil.basic.cna.model.ModelUtil;
 import com.dwarfeng.dutil.basic.cna.model.SyncListModel;
 import com.dwarfeng.dutil.basic.cna.model.SyncReferenceModel;
@@ -36,6 +35,7 @@ import com.dwarfeng.dutil.develop.resource.SyncResourceHandler;
 import com.dwarfeng.dutil.develop.setting.DefaultSettingHandler;
 import com.dwarfeng.dutil.develop.setting.SettingUtil;
 import com.dwarfeng.dutil.develop.setting.SyncSettingHandler;
+import com.jier.xlstool.wcbz.core.view.MainFrame;
 
 /**
  * 午餐补助统计核心控制类。
@@ -46,9 +46,9 @@ import com.dwarfeng.dutil.develop.setting.SyncSettingHandler;
 public class WCBZ {
 
 	/** 程序的版本。 */
-	public static final Version VERSION = new DefaultVersion.Builder().setType(VersionType.ALPHA)
-			.setFirstVersion((byte) 0).setSecondVersion((byte) 0).setThirdVersion((byte) 0).setBuildVersion('A')
-			.build();
+	public static final Version VERSION = new DefaultVersion.Builder().setType(VersionType.RELEASE)
+			.setFirstVersion((byte) 1).setSecondVersion((byte) 0).setThirdVersion((byte) 0).setBuildDate("20181209")
+			.setBuildVersion('A').build();
 	/** 程序的实例列表，用于持有引用 */
 	private static final Set<WCBZ> INSTANCES = Collections.synchronizedSet(new HashSet<>());
 
@@ -56,7 +56,7 @@ public class WCBZ {
 	/** 模型管理器。 */
 	private final ModelManager modelManager = new WCBZModelManager(this);
 	/** 动作管理器。 */
-	private final ActionManager actionManager = new WCBZControlManager(this);
+	private final ActionManager actionManager = new WCBZActionlManager(this);
 
 	// --------------------------------------------模型--------------------------------------------
 	/** 后台。 */
@@ -77,7 +77,7 @@ public class WCBZ {
 	private final SyncResourceHandler resourceHandler = ResourceUtil.syncResourceHandler(new DelegateResourceHandler());
 
 	/** 将要被打开的文件。 */
-	private final SyncReferenceModel<File> file2OpenModel = ModelUtil.syncReferenceModel(new DefaultReferenceModel<>());
+	private final SyncReferenceModel<File> file2LoadModel = ModelUtil.syncReferenceModel(new DefaultReferenceModel<>());
 	/** 将要被导出的文件。 */
 	private final SyncReferenceModel<File> file2ExportModel = ModelUtil
 			.syncReferenceModel(new DefaultReferenceModel<>());
@@ -95,6 +95,10 @@ public class WCBZ {
 	private final Lock runtimeStateLock = new ReentrantLock();
 	/** 程序的状态条件 */
 	private final Condition runtimeStateCondition = runtimeStateLock.newCondition();
+
+	// --------------------------------------------视图--------------------------------------------
+	private final SyncReferenceModel<MainFrame> mainFrameRef = ModelUtil
+			.syncReferenceModel(new DefaultReferenceModel<>());
 
 	/**
 	 * 新实例。
@@ -130,7 +134,6 @@ public class WCBZ {
 		runtimeStateLock.lock();
 		try {
 			long nanosTimeout = unit.toNanos(timeout);
-			// TODO 此处将 finishedFlag 换成了 isFinished() 方法，在将来的实际运行中确认这样做是否会产生死锁。
 			while (runtimeStateRef.get() != RuntimeState.ENDED) {
 				if (nanosTimeout > 0)
 					nanosTimeout = runtimeStateCondition.awaitNanos(nanosTimeout);
@@ -201,10 +204,10 @@ public class WCBZ {
 	}
 
 	/**
-	 * @return the file2OpenModel
+	 * @return the file2LoadModel
 	 */
-	SyncReferenceModel<File> getFile2OpenModel() {
-		return file2OpenModel;
+	SyncReferenceModel<File> getFile2LoadModel() {
+		return file2LoadModel;
 	}
 
 	/**
@@ -219,6 +222,13 @@ public class WCBZ {
 	 */
 	SyncLoggerHandler getLoggerHandler() {
 		return loggerHandler;
+	}
+
+	/**
+	 * @return the mainFrameRef
+	 */
+	SyncReferenceModel<MainFrame> getMainFrameRef() {
+		return mainFrameRef;
 	}
 
 	/**
@@ -259,7 +269,7 @@ public class WCBZ {
 	/**
 	 * @return the stuffInfoModel
 	 */
-	ListModel<AttributeComplex> getStuffInfoModel() {
+	SyncListModel<AttributeComplex> getStuffInfoModel() {
 		return stuffInfoModel;
 	}
 

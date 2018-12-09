@@ -16,6 +16,10 @@ public enum ResourceKey implements Name {
 	I18N_SETTING("i18n-setting"),
 	/** 程序配置文件。 */
 	CONFIG("config"),
+	/** 程序模态文件。 */
+	MODAL("modal"),
+	/** 输出文件的模板。 */
+	EXPORT_TEMPLATE("export-template"),
 
 	;
 

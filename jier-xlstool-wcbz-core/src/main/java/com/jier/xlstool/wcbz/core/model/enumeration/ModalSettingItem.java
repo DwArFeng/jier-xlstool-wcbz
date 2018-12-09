@@ -8,13 +8,13 @@ import com.dwarfeng.dutil.develop.setting.info.FileSettingInfo;
 public enum ModalSettingItem implements SettingEnumItem {
 
 	/** 是否有上次打开的文件。 */
-	FLAG_LAST_OPENED_FILE_EXISTS("flag.last-opened-file-exists", new BooleanSettingInfo("false")),
+	FLAG_LAST_LOADED_FILE_EXISTS("flag.last-loaded-file-exists", new BooleanSettingInfo("false")),
 	/** 上次打开的文件位置。 */
-	PATH_LAST_OPENED_FILE("path.last-opened-file", new FileSettingInfo("attribute")),
+	FILE_LAST_LOADED_FILE("path.last-loaded-file", new FileSettingInfo("attribute")),
 	/** 是否有上次打开的文件。 */
 	FLAG_LAST_EXPORTED_FILE_EXISTS("flag.last-exported-file-exists", new BooleanSettingInfo("false")),
 	/** 上次打开的文件位置。 */
-	PATH_LAST_EXPORTED_FILE("path.last-exported-file", new FileSettingInfo("attribute")),
+	FILE_LAST_EXPORTED_FILE("path.last-exported-file", new FileSettingInfo("attribute")),
 
 	;
 

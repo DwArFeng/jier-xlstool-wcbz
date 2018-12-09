@@ -35,7 +35,7 @@ public interface ModelManager {
 	/**
 	 * @return the file2OpenModel
 	 */
-	public SyncReferenceModel<File> getFile2OpenModel();
+	public SyncReferenceModel<File> getFile2LoadModel();
 
 	/**
 	 * @return the i18nHandler
