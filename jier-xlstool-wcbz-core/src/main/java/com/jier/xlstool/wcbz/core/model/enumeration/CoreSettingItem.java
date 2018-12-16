@@ -15,14 +15,9 @@ public enum CoreSettingItem implements SettingEnumItem {
 	I18N_LOCALE("i18n.locale", new LocaleSettingInfo("zh_CN")),
 
 	/** 源文件的总表所在的表单序号，从0开始计数。 */
-	SRCTABLE_INDEX_COUNT_SHEET("srctable.index.count-sheet", new PositiveIntegerSettingInfo("1")),
+	SRCTABLE_INDEX_DATA_SHEET("srctable.index.data-sheet", new PositiveIntegerSettingInfo("1")),
 	/** 源文件的第一行数据行，从0开始计数。 */
 	SRCTABLE_INDEX_ROW_FIRST_DATA("scrtable.index.row.first-data", new PositiveIntegerSettingInfo("3")),
-
-	/** 导出文件的第一行表头行，从0开始计数。 */
-	EXPTABLE_INDEX_EXPORT_SHEET("exptable.index.row.export-sheet", new PositiveIntegerSettingInfo("0")),
-	/** 导出文件的第一行数据行，从0开始计数。 */
-	EXPTABLE_INDEX_ROW_FIRST_DATA("exptable.index.row.first-data", new PositiveIntegerSettingInfo("3")),
 
 	/** 源文件的检测数据所在的列，从0开始计数。 */
 	SRCTABLE_INDEX_COLUMN_CHECK("srctable.index.column.check", new PositiveIntegerSettingInfo("0")),
@@ -35,6 +30,11 @@ public enum CoreSettingItem implements SettingEnumItem {
 	/** 源文件的缺勤统计所在的列，从0开始计数。 */
 	SRCTABLE_INDEX_COLUMN_ABSENCE_COUNT("srctable.index.column.absence-count", new PositiveIntegerSettingInfo("8")),
 
+	/** 数据导出的目标表单序号，从0开始计数。 */
+	EXPTABLE_INDEX_TARGET_SHEET("exptable.index.row.target-sheet", new PositiveIntegerSettingInfo("0")),
+	/** 导出文件的第一行数据行，从0开始计数。 */
+	EXPTABLE_INDEX_ROW_FIRST_DATA("exptable.index.row.first-data", new PositiveIntegerSettingInfo("3")),
+
 	/** 源文件的职工部门所在的列，从0开始计数。 */
 	EXPTABLE_INDEX_COLUMN_DEPARTMENT("exptable.index.column.department", new PositiveIntegerSettingInfo("1")),
 	/** 源文件的员工工号所在的列，从0开始计数。 */
@@ -44,8 +44,24 @@ public enum CoreSettingItem implements SettingEnumItem {
 	/** 源文件的缺勤统计所在的列，从0开始计数。 */
 	EXPTABLE_INDEX_COLUMN_ABSENCE_COUNT("exptable.index.column.absence-count", new PositiveIntegerSettingInfo("4")),
 
+	/** 员工列表所在的表单序号，从0开始计数。 */
+	STUFFLIST_INDEX_DATA_SHEET("stufflist.index.row.data-sheet", new PositiveIntegerSettingInfo("0")),
+	/** 员工列表的第一行数据行，从0开始计数。 */
+	STUFFLIST_INDEX_ROW_FIRST_DATA("stufflist.index.row.first-data", new PositiveIntegerSettingInfo("0")),
+
+	/** 员工列表的职工部门所在的列，从0开始计数。 */
+	STUFFLIST_INDEX_COLUMN_DEPARTMENT("stufflist.index.column.department", new PositiveIntegerSettingInfo("0")),
+	/** 员工列表的员工工号所在的列，从0开始计数。 */
+	STUFFLIST_INDEX_COLUMN_WORK_NUMBER("stufflist.index.column.work-number", new PositiveIntegerSettingInfo("1")),
+	/** 员工列表的员工姓名所在的列，从0开始计数。 */
+	STUFFLIST_INDEX_COLUMN_STUFF_NAME("stufflist.index.column.stuff-name", new PositiveIntegerSettingInfo("2")),
+	/** 源文件的缺勤统计所在的列，从0开始计数。 */
+	STUFFLIST_INDEX_COLUMN_ABSENCE_COUNT("stufflist.index.column.absence-count", new PositiveIntegerSettingInfo("3")),
+
 	/** 源文件最多统计的行数。 */
 	SRCTABLE_POLICY_MAX_LOAD_ROW("srctable.policy.max-load-row", new PositiveIntegerSettingInfo("9999")),
+	/** 员工列表最多统计的行数。 */
+	STUFFLIST_POLICY_MAX_LOAD_ROW("stufflist.policy.max-load-row", new PositiveIntegerSettingInfo("9999")),
 
 	;
 

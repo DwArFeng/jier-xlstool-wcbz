@@ -20,6 +20,8 @@ public enum ResourceKey implements Name {
 	MODAL("modal"),
 	/** 输出文件的模板。 */
 	EXPORT_TEMPLATE("export-template"),
+	/** 输出文件的模板。 */
+	STUFF_LIST("stuff-list"),
 
 	;
 

@@ -45,6 +45,12 @@ public enum I18nKey implements Name {
 	LOGGER_38(new DefaultName("logger.38")), //
 	LOGGER_39(new DefaultName("logger.39")), //
 	LOGGER_40(new DefaultName("logger.40")), //
+	LOGGER_41(new DefaultName("logger.41")), //
+	LOGGER_42(new DefaultName("logger.42")), //
+	LOGGER_43(new DefaultName("logger.43")), //
+	LOGGER_44(new DefaultName("logger.44")), //
+	LOGGER_45(new DefaultName("logger.45")), //
+	LOGGER_46(new DefaultName("logger.46")), //
 
 	LABEL_1(new DefaultName("label.1")), //
 	LABEL_2(new DefaultName("label.2")), //

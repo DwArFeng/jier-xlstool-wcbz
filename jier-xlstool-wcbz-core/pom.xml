@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>com.jier</groupId>
 		<artifactId>jier-xlstool-wcbz</artifactId>
-		<version>1.0.0.a</version>
+		<version>1.1.0.a</version>
 	</parent>
 
 	<artifactId>jier-xlstool-wcbz-core</artifactId>
@@ -52,13 +52,13 @@
 		<resources>
 			<resource>
 				<directory>src/main/resources</directory>
-				<filtering>true</filtering>
+				<filtering>false</filtering>
 			</resource>
 		</resources>
 		<testResources>
 			<testResource>
 				<directory>src/test/resources</directory>
-				<filtering>true</filtering>
+				<filtering>false</filtering>
 			</testResource>
 		</testResources>
 		<plugins>

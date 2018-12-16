@@ -21,11 +21,10 @@ import com.dwarfeng.dutil.basic.io.LoadFailedException;
 import com.dwarfeng.dutil.basic.io.StreamLoader;
 import com.jier.xlstool.wcbz.core.util.Constants;
 
-public class XlsStuffInfoLoader extends StreamLoader<List<AttributeComplex>> {
+public class XlsStuffListLoader extends StreamLoader<List<AttributeComplex>> {
 
 	private final int dataSheetIndex;
 	private final int firstDataRowCount;
-	private final int checkColumnIndex;
 	private final int departmentColumnIndex;
 	private final int workNumberColumnIndex;
 	private final int stuffNameColumnIndex;
@@ -36,13 +35,12 @@ public class XlsStuffInfoLoader extends StreamLoader<List<AttributeComplex>> {
 
 	private boolean readFlag = false;
 
-	public XlsStuffInfoLoader(InputStream in, int dataSheetIndex, int firstDataRowCount, int checkColumnIndex,
-			int departmentColumnIndex, int workNumberColumnIndex, int stuffNameColumnIndex, int absenceCountColumnIndex,
-			int maxLoadRow) throws IOException {
+	public XlsStuffListLoader(InputStream in, int dataSheetIndex, int firstDataRowCount, int departmentColumnIndex,
+			int workNumberColumnIndex, int stuffNameColumnIndex, int absenceCountColumnIndex, int maxLoadRow)
+			throws IOException {
 		super(in);
 		this.dataSheetIndex = dataSheetIndex;
 		this.firstDataRowCount = firstDataRowCount;
-		this.checkColumnIndex = checkColumnIndex;
 		this.departmentColumnIndex = departmentColumnIndex;
 		this.workNumberColumnIndex = workNumberColumnIndex;
 		this.stuffNameColumnIndex = stuffNameColumnIndex;
@@ -66,7 +64,7 @@ public class XlsStuffInfoLoader extends StreamLoader<List<AttributeComplex>> {
 			Sheet sheet = workbook.getSheetAt(dataSheetIndex);
 
 			int currRowIndex = firstDataRowCount;
-			while (isDataRow(sheet, currRowIndex) && currRowIndex < maxLoadRow) {
+			while (currRowIndex <= sheet.getLastRowNum() && currRowIndex < maxLoadRow) {
 				loadRow(sheet, currRowIndex++, stuffInfoModel);
 			}
 
@@ -95,7 +93,7 @@ public class XlsStuffInfoLoader extends StreamLoader<List<AttributeComplex>> {
 			Sheet sheet = workbook.getSheetAt(dataSheetIndex);
 
 			int currRowIndex = firstDataRowCount;
-			while (isDataRow(sheet, currRowIndex) && currRowIndex < maxLoadRow) {
+			while (currRowIndex <= sheet.getLastRowNum() && currRowIndex < maxLoadRow) {
 				try {
 					loadRow(sheet, currRowIndex++, stuffInfoModel);
 				} catch (Exception e) {
@@ -135,13 +133,6 @@ public class XlsStuffInfoLoader extends StreamLoader<List<AttributeComplex>> {
 		});
 
 		stuffInfoModel.add(ac);
-	}
-
-	private boolean isDataRow(Sheet sheet, int currRowIndex) {
-		Row row = sheet.getRow(currRowIndex);
-		String checkValue = Optional.ofNullable(row.getCell(checkColumnIndex))
-				.map(cell -> hssfDataFormatter.formatCellValue(cell)).orElse("");
-		return checkValue.isEmpty() ? false : checkValue.matches("\\d+");
 	}
 
 }

@@ -6,8 +6,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -58,6 +61,7 @@ import com.jier.xlstool.wcbz.core.model.enumeration.ModalSettingItem;
 import com.jier.xlstool.wcbz.core.model.enumeration.ResourceKey;
 import com.jier.xlstool.wcbz.core.model.ioprocessor.XlsStuffInfoLoader;
 import com.jier.xlstool.wcbz.core.model.ioprocessor.XlsStuffInfoSaver;
+import com.jier.xlstool.wcbz.core.model.ioprocessor.XlsStuffListLoader;
 import com.jier.xlstool.wcbz.core.model.struct.StuffInfoComparator;
 import com.jier.xlstool.wcbz.core.util.Constants;
 import com.jier.xlstool.wcbz.core.view.MainFrame;
@@ -551,19 +555,25 @@ class WCBZActionlManager implements ActionManager {
 
 		File file = Optional.ofNullable(file2OpenModel.get())
 				.orElseThrow(() -> new IllegalStateException("待读取文件模型中没有文件。"));
+		List<AttributeComplex> tempStuffInfos = new ArrayList<>();
+		List<AttributeComplex> tempStuffList = new ArrayList<>();
 
 		// 记录日志。
 		info(I18nKey.LOGGER_26);
-		// 读取文件信息持久化。
+		// 设置文件信息持久化。
 		setLoadFileModalInfo(file);
 		// 定义计时器。
 		TimeMeasurer tm = new TimeMeasurer();
 		// 开始计时。
 		tm.start();
+		// 清除模型数据。
+		clearData();
 		// 读取文件。
-		loadFile0(file);
-		// 数据排序。
-		sortStuffInfo();
+		loadFile0(file, tempStuffInfos);
+		// 读取全体员工信息。
+		loadStuffList(tempStuffList);
+		// 整理数据。
+		dataProcess(tempStuffInfos, tempStuffList);
 		// 计时结束。
 		tm.stop();
 		// 输出信息。
@@ -584,11 +594,18 @@ class WCBZActionlManager implements ActionManager {
 		}
 	}
 
-	private void loadFile0(File file) {
+	private void clearData() {
+		info(I18nKey.LOGGER_45);
+
+		SyncListModel<AttributeComplex> stuffInfoModel = wcbz.getStuffInfoModel();
+
+		stuffInfoModel.clear();
+	}
+
+	private void loadFile0(File file, List<AttributeComplex> tempStuffInfos) {
 		info(I18nKey.LOGGER_28);
 
 		SyncSettingHandler coreSettingHandler = wcbz.getCoreSettingHandler();
-		SyncListModel<AttributeComplex> stuffInfoModel = wcbz.getStuffInfoModel();
 
 		int dataSheetIndex;
 		int firstDataRowCount;
@@ -601,7 +618,7 @@ class WCBZActionlManager implements ActionManager {
 
 		coreSettingHandler.getLock().readLock().lock();
 		try {
-			dataSheetIndex = coreSettingHandler.getParsedValidValue(CoreSettingItem.SRCTABLE_INDEX_COUNT_SHEET,
+			dataSheetIndex = coreSettingHandler.getParsedValidValue(CoreSettingItem.SRCTABLE_INDEX_DATA_SHEET,
 					Integer.class);
 			firstDataRowCount = coreSettingHandler.getParsedValidValue(CoreSettingItem.SRCTABLE_INDEX_ROW_FIRST_DATA,
 					Integer.class);
@@ -625,40 +642,101 @@ class WCBZActionlManager implements ActionManager {
 		try {
 			in = new FileInputStream(file);
 		} catch (IOException e) {
-			error(I18nKey.LOGGER_28, e);
+			error(I18nKey.LOGGER_29, e);
 			return;
 		}
-		stuffInfoModel.getLock().writeLock().lock();
-		try {
-			// 存放读取异常的对象。
-			Set<LoadFailedException> eptSet = new LinkedHashSet<>();
-			try (XlsStuffInfoLoader loader = new XlsStuffInfoLoader(in, dataSheetIndex, firstDataRowCount,
-					checkColumnIndex, departmentColumnIndex, workNumberColumnIndex, stuffNameColumnIndex,
-					absenceCountColumnIndex, maxLoadRow)) {
-				eptSet = loader.countinuousLoad(stuffInfoModel);
-				for (LoadFailedException e : eptSet) {
-					warn(I18nKey.LOGGER_25, e);
-				}
-			} catch (IOException e) {
-				error(I18nKey.LOGGER_27, e);
+		// 存放读取异常的对象。
+		Set<LoadFailedException> eptSet = new LinkedHashSet<>();
+		try (XlsStuffInfoLoader loader = new XlsStuffInfoLoader(in, dataSheetIndex, firstDataRowCount, checkColumnIndex,
+				departmentColumnIndex, workNumberColumnIndex, stuffNameColumnIndex, absenceCountColumnIndex,
+				maxLoadRow)) {
+			eptSet = loader.countinuousLoad(tempStuffInfos);
+			for (LoadFailedException e : eptSet) {
+				warn(I18nKey.LOGGER_30, e);
 			}
-		} finally {
-			stuffInfoModel.getLock().writeLock().unlock();
+		} catch (IOException e) {
+			error(I18nKey.LOGGER_27, e);
 		}
 
 	}
 
-	private void sortStuffInfo() {
+	private void loadStuffList(List<AttributeComplex> tempStuffList) {
+		info(I18nKey.LOGGER_41);
+
+		SyncSettingHandler coreSettingHandler = wcbz.getCoreSettingHandler();
+
+		int dataSheetIndex;
+		int firstDataRowCount;
+		int departmentColumnIndex;
+		int workNumberColumnIndex;
+		int stuffNameColumnIndex;
+		int absenceCountColumnIndex;
+		int maxLoadRow;
+
+		coreSettingHandler.getLock().readLock().lock();
+		try {
+			dataSheetIndex = coreSettingHandler.getParsedValidValue(CoreSettingItem.STUFFLIST_INDEX_DATA_SHEET,
+					Integer.class);
+			firstDataRowCount = coreSettingHandler.getParsedValidValue(CoreSettingItem.STUFFLIST_INDEX_ROW_FIRST_DATA,
+					Integer.class);
+			departmentColumnIndex = coreSettingHandler
+					.getParsedValidValue(CoreSettingItem.STUFFLIST_INDEX_COLUMN_DEPARTMENT, Integer.class);
+			workNumberColumnIndex = coreSettingHandler
+					.getParsedValidValue(CoreSettingItem.STUFFLIST_INDEX_COLUMN_WORK_NUMBER, Integer.class);
+			stuffNameColumnIndex = coreSettingHandler
+					.getParsedValidValue(CoreSettingItem.STUFFLIST_INDEX_COLUMN_STUFF_NAME, Integer.class);
+			absenceCountColumnIndex = coreSettingHandler
+					.getParsedValidValue(CoreSettingItem.STUFFLIST_INDEX_COLUMN_ABSENCE_COUNT, Integer.class);
+			maxLoadRow = coreSettingHandler.getParsedValidValue(CoreSettingItem.STUFFLIST_POLICY_MAX_LOAD_ROW,
+					Integer.class);
+		} finally {
+			coreSettingHandler.getLock().readLock().unlock();
+		}
+
+		InputStream in;
+		try {
+			in = openResourceInputStream(ResourceKey.STUFF_LIST);
+		} catch (IOException e) {
+			error(I18nKey.LOGGER_42, e);
+			return;
+		}
+		// 存放读取异常的对象。
+		Set<LoadFailedException> eptSet = new LinkedHashSet<>();
+		try (XlsStuffListLoader loader = new XlsStuffListLoader(in, dataSheetIndex, firstDataRowCount,
+				departmentColumnIndex, workNumberColumnIndex, stuffNameColumnIndex, absenceCountColumnIndex,
+				maxLoadRow)) {
+			eptSet = loader.countinuousLoad(tempStuffList);
+			for (LoadFailedException e : eptSet) {
+				warn(I18nKey.LOGGER_43, e);
+			}
+		} catch (IOException e) {
+			error(I18nKey.LOGGER_44, e);
+		}
+
+	}
+
+	private void dataProcess(List<AttributeComplex> tempStuffInfos, List<AttributeComplex> tempStuffList) {
 		info(I18nKey.LOGGER_33);
 
 		SyncListModel<AttributeComplex> stuffInfoModel = wcbz.getStuffInfoModel();
 
-		stuffInfoModel.getLock().writeLock().lock();
-		try {
-			Collections.sort(stuffInfoModel, new StuffInfoComparator());
-		} finally {
-			stuffInfoModel.getLock().writeLock().unlock();
-		}
+		Set<Object> workNumberSet = new HashSet<>();
+
+		// 将员工信息中出现的工号归纳到工号集合中。
+		tempStuffInfos.stream().forEach(ac -> {
+			workNumberSet.add(ac.get(Constants.ATTRIBUTE_COMPLEX_MARK_WORK_NUMBER));
+		});
+		// 遍历员工列表的工号集合，员工信息列表没有相应的工号，则将对应的员工信息输入到临时员工信息表中。
+		tempStuffList.stream().forEach(ac -> {
+			Object workNumber = ac.get(Constants.ATTRIBUTE_COMPLEX_MARK_WORK_NUMBER);
+			if (!workNumberSet.contains(workNumber)) {
+				tempStuffInfos.add(ac);
+			}
+		});
+		// 对员工进行排序。
+		Collections.sort(tempStuffInfos, new StuffInfoComparator());
+		// 将临时员工的数据导入到员工信息数据。
+		stuffInfoModel.addAll(tempStuffInfos);
 	}
 
 	/**
@@ -684,7 +762,7 @@ class WCBZActionlManager implements ActionManager {
 		// 计时结束。
 		tm.stop();
 		// 输出信息。
-		formatInfo(I18nKey.LOGGER_31, tm.getTimeMs());
+		formatInfo(I18nKey.LOGGER_46, tm.getTimeMs());
 	}
 
 	private void setExportFileModalInfo(File file) {
@@ -716,7 +794,7 @@ class WCBZActionlManager implements ActionManager {
 
 		coreSettingHandler.getLock().readLock().lock();
 		try {
-			dataSheetIndex = coreSettingHandler.getParsedValidValue(CoreSettingItem.EXPTABLE_INDEX_EXPORT_SHEET,
+			dataSheetIndex = coreSettingHandler.getParsedValidValue(CoreSettingItem.EXPTABLE_INDEX_TARGET_SHEET,
 					Integer.class);
 			firstDataRowCount = coreSettingHandler.getParsedValidValue(CoreSettingItem.EXPTABLE_INDEX_ROW_FIRST_DATA,
 					Integer.class);
