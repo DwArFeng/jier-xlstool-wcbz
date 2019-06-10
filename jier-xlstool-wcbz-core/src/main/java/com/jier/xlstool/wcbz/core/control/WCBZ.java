@@ -47,7 +47,7 @@ public class WCBZ {
 
 	/** 程序的版本。 */
 	public static final Version VERSION = new DefaultVersion.Builder().setType(VersionType.RELEASE)
-			.setFirstVersion((byte) 1).setSecondVersion((byte) 1).setThirdVersion((byte) 0).setBuildDate("20181216")
+			.setFirstVersion((byte) 1).setSecondVersion((byte) 1).setThirdVersion((byte) 1).setBuildDate("20190610")
 			.setBuildVersion('A').build();
 	/** 程序的实例列表，用于持有引用 */
 	private static final Set<WCBZ> INSTANCES = Collections.synchronizedSet(new HashSet<>());

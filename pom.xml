@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.jier</groupId>
 	<artifactId>jier-xlstool-wcbz</artifactId>
-	<version>1.1.0.a</version>
+	<version>1.1.1.a</version>
 	<packaging>pom</packaging>
 
 	<name>jier-xlstool-wcbz</name>
@@ -34,12 +36,12 @@
 			<dependency>
 				<groupId>com.dwarfeng</groupId>
 				<artifactId>dutil-basic</artifactId>
-				<version>beta-0.2.0.a-SNAPSHOT</version>
+				<version>beta-0.2.0.a</version>
 			</dependency>
 			<dependency>
 				<groupId>com.dwarfeng</groupId>
 				<artifactId>dutil-develop</artifactId>
-				<version>beta-0.2.0.a-SNAPSHOT</version>
+				<version>beta-0.2.0.a</version>
 			</dependency>
 			<dependency>
 				<groupId>commons-cli</groupId>
@@ -59,13 +61,13 @@
 			<dependency>
 				<groupId>com.jier</groupId>
 				<artifactId>jier-xlstool-wcbz-core</artifactId>
-				<version>1.1.0.a</version>
+				<version>1.1.1.a</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
 	<modules>
 		<module>jier-xlstool-wcbz-core</module>
-    <module>jier-xlstool-wcbz-launcher</module>
-  </modules>
+		<module>jier-xlstool-wcbz-launcher</module>
+	</modules>
 </project>
